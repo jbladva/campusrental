@@ -14,6 +14,7 @@ import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -34,13 +35,13 @@ public class Tenant {
     @Column(name = "phone_number", unique = true)
     private String phoneNumber;
 
-    @ManyToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @ManyToOne( fetch = FetchType.LAZY)
     @JoinColumn(name = "property_id")
     private Property property;
 
     @Column(name = "created_date")
-    private LocalDateTime createdDate;
+    private LocalDate createdDate;
 
     @Column(name = "updated_date")
-    private LocalDateTime updatedDate;
+    private LocalDate updatedDate;
 }

@@ -7,10 +7,9 @@ import java.util.List;
 
 public interface TenantService {
 
-    TenantDTO getTenantById(String id);
+    TenantDTO getTenantById(String email);
     List<TenantDTO> getTenantsInProperty(Long propertyId);
-    ResponseDTO addTenant(TenantDTO tenantDTO);
     TenantDTO addTenantToProperty(Long propertyId, TenantDTO tenantDTO);
-    void deleteTenant(String tenantId);
+    void deleteTenant(String email);
     ResponseDTO moveTenantToProperty(String tenantId, Long newPropertyId);
 }

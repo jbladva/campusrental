@@ -10,7 +10,7 @@ import org.springframework.http.HttpStatus;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ErrorResponseDTO {
 
-    private HttpStatus status;
+    private Integer status;
     private String message;
     private Object data;
 }

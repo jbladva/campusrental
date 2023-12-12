@@ -10,5 +10,13 @@ import java.util.Optional;
 @Repository
 public interface TenantRepository extends JpaRepository<Tenant, String> {
 
-    Optional<Tenant> findByEmailOrPhoneNumber(String email, String phoneNumber);
+    Optional<Tenant> findByEmailOrPhoneNumberAndPropertyId(String email, String phoneNumber,long propertyId);
+
+    Optional<Object> findByEmailOrPhoneNumber(String email, String phoneNumber);
+
+    void deleteByEmail(String email);
+
+    boolean existsByEmail(String email);
+
+    Optional<Tenant> findByEmail(String email);
 }

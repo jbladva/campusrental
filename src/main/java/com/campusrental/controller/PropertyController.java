@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -29,7 +30,7 @@ public class PropertyController {
         this.propertyService = propertyService;
     }
 
-    @GetMapping
+    @GetMapping("/get")
     public ResponseEntity<List<PropertyDTO>> getAllProperties() {
         List<PropertyDTO> properties = propertyService.getAllProperties();
         return ResponseEntity.ok(properties);
@@ -40,15 +41,21 @@ public class PropertyController {
         return ResponseEntity.ok(propertyService.getAvailableProperties());
     }
 
-    @GetMapping("/{propertyId}")
+    @GetMapping("/id/{propertyId}")
     public ResponseEntity<PropertyDTO> getPropertyWithTenants(@PathVariable Long propertyId) {
         PropertyDTO propertyWithTenants = propertyService.getPropertyByIdWithTenantCount(propertyId);
         return ResponseEntity.ok(propertyWithTenants);
     }
 
-    @PostMapping
+    @PostMapping("/add")
     public ResponseEntity<ResponseDTO> addProperty(@RequestBody CreatePropertyDTO propertyDTO) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(propertyService.addProperty(propertyDTO));
+        try {
+            return ResponseEntity.status(HttpStatus.CREATED).body(propertyService.addProperty(propertyDTO));
+        }
+        catch (ResponseStatusException exception)
+        {
+            throw  new ResponseStatusException(exception.getStatus(), exception.getMessage());
+        }
     }
 
     @GetMapping("/total-rental-income")
@@ -57,7 +64,7 @@ public class PropertyController {
         return ResponseEntity.ok(totalRentalIncome);
     }
 
-    @DeleteMapping("/{propertyId}")
+    @DeleteMapping("/delete/{propertyId}")
     public ResponseEntity<String> deleteProperty(@PathVariable Long propertyId) {
         propertyService.deleteProperty(propertyId);
         return ResponseEntity.ok("Property has been deleted");

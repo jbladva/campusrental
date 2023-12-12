@@ -6,10 +6,12 @@ import com.campusrental.entity.Property;
 import com.campusrental.entity.Tenant;
 import com.campusrental.exception.CapacityExceededException;
 import com.campusrental.exception.PropertyNotFoundException;
+import com.campusrental.exception.PropertyValidationException;
 import com.campusrental.exception.TenantNotFoundException;
 import com.campusrental.repository.PropertyRepository;
 import com.campusrental.repository.TenantRepository;
 import com.campusrental.service.TenantService;
+import com.campusrental.util.Common;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -18,6 +20,7 @@ import org.springframework.util.ObjectUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 import javax.transaction.Transactional;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -37,9 +40,9 @@ public class TenantServiceImpl implements TenantService {
     }
 
     @Override
-    public TenantDTO getTenantById(String id) {
-        Optional<Tenant> tenantOptional = tenantRepository.findById(id);
-        return tenantOptional.map(tenant -> modelMapper.map(tenant, TenantDTO.class)).orElse(null);
+    public TenantDTO getTenantById(String email) {
+        Tenant tenant = tenantRepository.findByEmail(email).orElseThrow(()->new TenantNotFoundException("Tenant is not available"));
+        return modelMapper.map(tenant,TenantDTO.class);
     }
 
     @Override
@@ -59,29 +62,29 @@ public class TenantServiceImpl implements TenantService {
         }
     }
 
-    @Override
-    public ResponseDTO addTenant(TenantDTO tenantDTO) {
-        tenantRepository.findByEmailOrPhoneNumber(tenantDTO.getEmail(), tenantDTO.getPhoneNumber())
-                .ifPresent((tenant -> {
-                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tenant already exists with email or mobile");
-                }));
-        Tenant tenant = modelMapper.map(tenantDTO, Tenant.class);
-        tenantRepository.save(tenant);
-        return ResponseDTO.builder().data("Tenant created successfully").build();
-    }
+
 
     @Override
-    public TenantDTO addTenantToProperty(Long propertyId, TenantDTO tenantDTO) {
+    public TenantDTO addTenantToProperty(Long propertyId, TenantDTO tenantDTO)  {
+
+        if (ObjectUtils.isEmpty(tenantDTO.getEmail()) || ObjectUtils.isEmpty(tenantDTO.getPhoneNumber()))
+            throw new PropertyValidationException("Tenant email and mobile number should not be empty");
+        if (Boolean.FALSE.equals(Common.isValidMobileNo(tenantDTO.getPhoneNumber())))
+            throw new PropertyValidationException("Please enter a valid mobile number");
+        if (Boolean.FALSE.equals(Common.isValidEmail(tenantDTO.getEmail())))
+            throw new PropertyValidationException("Please enter a valid email address");
+
         tenantRepository.findByEmailOrPhoneNumber(tenantDTO.getEmail(), tenantDTO.getPhoneNumber())
                 .ifPresent((tenant -> {
-                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tenant already exists with email or mobile");
-                }));
+                    throw new PropertyNotFoundException("Tenant already exists with email or mobile");}));
         Optional<Property> propertyOptional = propertyRepository.findById(propertyId);
 
         if (propertyOptional.isPresent()) {
             Property property = propertyOptional.get();
             if (property.getTenants().size() < property.getCapacity()) {
                 Tenant tenant = modelMapper.map(tenantDTO, Tenant.class);
+                tenant.setCreatedDate(LocalDate.now());
+                tenant.setUpdatedDate(LocalDate.now());
                 tenant.setProperty(property);
                 Tenant savedTenant = tenantRepository.save(tenant);
                 return modelMapper.map(savedTenant, TenantDTO.class);
@@ -95,8 +98,10 @@ public class TenantServiceImpl implements TenantService {
 
     @Override
     @Transactional
-    public void deleteTenant(String tenantId) {
-        tenantRepository.deleteById(tenantId);
+    public void deleteTenant(String email) {
+        if(!tenantRepository.existsByEmail(email))
+            throw new PropertyValidationException("Tenant is not available.");
+        tenantRepository.deleteByEmail(email);
     }
 
     @Override

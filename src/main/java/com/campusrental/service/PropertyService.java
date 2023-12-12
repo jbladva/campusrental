@@ -1,13 +1,10 @@
 package com.campusrental.service;
 
-import com.campusrental.dto.CreatePropertyDTO;
-import com.campusrental.dto.PropertyDTO;
+import com.campusrental.dto.*;
 
 import java.util.List;
 
 import com.campusrental.dto.PropertyDTO;
-import com.campusrental.dto.ResponseDTO;
-import com.campusrental.dto.TenantDTO;
 
 import javax.validation.Valid;
 import java.util.List;
@@ -15,6 +12,8 @@ import java.util.List;
 public interface PropertyService {
 
     List<PropertyDTO> getAllProperties();
+
+    List<GraphQlPropertyDto> getAllGraphQlProperties();
 
     ResponseDTO getAvailableProperties();
 

@@ -1,0 +1,45 @@
+
+#type Property {
+#  id: ID!
+#  address: String!
+#  eirCode: String!
+#  capacity: Int
+#  rentalCost: Float
+#  tenants: [Tenant]
+#}
+
+#type Tenant {
+#  email: String!
+#  name: String
+#  phoneNumber: String!
+#  property: Property
+#}
+type GraphQlTenantDto{
+    email: String
+    name: String
+    phoneNumber: String
+}
+type GraphQlPropertyDto {
+  id: ID
+  address: String
+  eirCode: String
+  capacity: Int
+  rentalCost: Float
+  tenants: [GraphQlTenantDto]
+}
+type Query {
+  allProperties: [GraphQlPropertyDto]!
+  getPropertyById(id: ID!): GraphQlPropertyDto
+}
+
+type Mutation {
+    addTenant(id: ID!, input: CreateTenantGraphQlDto!): GraphQlTenantDto
+    deleteProperty(id: ID!): String
+}
+
+input CreateTenantGraphQlDto {
+  email: String!
+  name: String
+  phoneNumber: String!
+}
+
