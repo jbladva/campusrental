@@ -8,11 +8,11 @@
 		<version>2.7.15</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>com.campusrental</groupId>
-	<artifactId>campusrental</artifactId>
+	<groupId>com.rental-agency</groupId>
+	<artifactId>rental-agency</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>campusrental</name>
-	<description>Campus rental</description>
+	<name>rental-agency</name>
+	<description>rental-agency</description>
 	<properties>
 		<java.version>11</java.version>
 	</properties>
