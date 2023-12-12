@@ -23,13 +23,13 @@ public class TenantController {
     private final TenantService tenantService;
 
     @Autowired
-    TenantController(TenantService tenantService){
+    public TenantController(TenantService tenantService){
         this.tenantService = tenantService;
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<TenantDTO> getTenantById(@PathVariable String id) {
-        return ResponseEntity.ok(tenantService.getTenantById(id));
+    @GetMapping("/{email}")
+    public ResponseEntity<TenantDTO> getTenantById(@PathVariable String email) {
+        return ResponseEntity.ok(tenantService.getTenantById(email));
     }
 
     @GetMapping("/property/{propertyId}")
@@ -37,12 +37,9 @@ public class TenantController {
         return ResponseEntity.ok(tenantService.getTenantsInProperty(propertyId));
     }
 
-    @PostMapping("/add")
-    public ResponseEntity<ResponseDTO> addNewTenant(@RequestBody TenantDTO tenantDTO) {
-        return ResponseEntity.ok(tenantService.addTenant(tenantDTO));
-    }
 
-    @PostMapping("/add-to-property/{propertyId}")
+
+    @PostMapping("/add/{propertyId}")
     public ResponseEntity<TenantDTO> addNewTenantToProperty(
             @PathVariable Long propertyId,
             @RequestBody TenantDTO tenantDTO) {
@@ -56,9 +53,9 @@ public class TenantController {
         return ResponseEntity.ok(tenantService.moveTenantToProperty(tenantId, newPropertyId));
     }
 
-    @DeleteMapping("/{tenantId}")
-    public ResponseEntity<String> deleteTenant(@PathVariable String tenantId) {
-        tenantService.deleteTenant(tenantId);
+    @DeleteMapping("/{email}")
+    public ResponseEntity<String> deleteTenant(@PathVariable String email) {
+        tenantService.deleteTenant(email);
         return ResponseEntity.ok("Tenant successfully deleted");
     }
 }

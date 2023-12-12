@@ -1,14 +1,14 @@
 package com.campusrental.service.impl;
-import com.campusrental.dto.CreatePropertyDTO;
-import com.campusrental.dto.PropertyDTO;
-import com.campusrental.dto.ResponseDTO;
-import com.campusrental.dto.TenantDTO;
+
+import com.campusrental.dto.*;
 import com.campusrental.entity.Property;
 import com.campusrental.entity.Tenant;
 import com.campusrental.exception.PropertyNotFoundException;
+import com.campusrental.exception.PropertyValidationException;
 import com.campusrental.repository.PropertyRepository;
 import com.campusrental.repository.TenantRepository;
 import com.campusrental.service.PropertyService;
+import com.campusrental.util.Common;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -17,8 +17,12 @@ import org.springframework.util.ObjectUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 import javax.transaction.Transactional;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,7 +33,7 @@ public class PropertyServiceImpl implements PropertyService {
     private final ModelMapper modelMapper;
 
     @Autowired
-    PropertyServiceImpl(PropertyRepository propertyRepository, TenantRepository tenantRepository, ModelMapper modelMapper){
+    PropertyServiceImpl(PropertyRepository propertyRepository, TenantRepository tenantRepository, ModelMapper modelMapper) {
         this.propertyRepository = propertyRepository;
         this.tenantRepository = tenantRepository;
         this.modelMapper = modelMapper;
@@ -38,23 +42,41 @@ public class PropertyServiceImpl implements PropertyService {
     @Override
     public List<PropertyDTO> getAllProperties() {
         List<Property> properties = propertyRepository.findAll();
-        if(ObjectUtils.isEmpty(properties)){
+        if (ObjectUtils.isEmpty(properties)) {
             throw new PropertyNotFoundException("Properties are not available");
         }
-        return properties.stream()
-                .map(property -> modelMapper.map(property, PropertyDTO.class))
-                .collect(Collectors.toList());
+        List<PropertyDTO> propertyDTOS= properties.stream()
+                .map(property -> {PropertyDTO propertyDTO = modelMapper.map(property, PropertyDTO.class);
+                propertyDTO.setTenants(null);
+                return propertyDTO;
+                }).collect(Collectors.toList());
+        return propertyDTOS;
+    }
+
+    @Override
+    public List<GraphQlPropertyDto> getAllGraphQlProperties() {
+        List<Property> properties = propertyRepository.findAll();
+        if (ObjectUtils.isEmpty(properties)) {
+            throw new PropertyNotFoundException("Properties are not available");
+        }
+        List<GraphQlPropertyDto> propertyDTOS= properties.stream()
+                .map(property -> {GraphQlPropertyDto propertyDTO = modelMapper.map(property, GraphQlPropertyDto.class);
+                    return propertyDTO;
+                }).collect(Collectors.toList());
+        return propertyDTOS;
     }
 
     @Override
     public ResponseDTO getAvailableProperties() {
         List<Property> properties = propertyRepository.findAvailableProperties();
-        if(ObjectUtils.isEmpty(properties)){
+        if (ObjectUtils.isEmpty(properties)) {
             return ResponseDTO.builder().data("No properties are available").build();
         }
-        return ResponseDTO.builder().data(properties.stream()
-                .map(property -> modelMapper.map(property, PropertyDTO.class))
-                .collect(Collectors.toList())).build();
+        List<PropertyDTO> propertyDTOList =properties.stream()
+                .map(property -> {PropertyDTO propertyDTO = modelMapper.map(property, PropertyDTO.class);
+                    propertyDTO.setTenants(null);
+                    return propertyDTO;}).collect(Collectors.toList());
+        return ResponseDTO.builder().data(propertyDTOList).build();
     }
 
     @Override
@@ -63,7 +85,6 @@ public class PropertyServiceImpl implements PropertyService {
         if (propertyOptional.isPresent()) {
             Property property = propertyOptional.get();
             PropertyDTO propertyDTO = modelMapper.map(property, PropertyDTO.class);
-            propertyDTO.setNumberOfTenant(property.getTenants().size());
             return propertyDTO;
         } else {
             throw new PropertyNotFoundException("Property is not available");
@@ -73,7 +94,7 @@ public class PropertyServiceImpl implements PropertyService {
     @Override
     public double getTotalRentalIncome() {
         List<Property> occupiedProperties = propertyRepository.findByTenantsIsNotEmpty();
-        if(ObjectUtils.isEmpty(occupiedProperties)){
+        if (ObjectUtils.isEmpty(occupiedProperties)) {
             throw new PropertyNotFoundException("Properties are not available");
         }
         return occupiedProperties.stream()
@@ -83,12 +104,18 @@ public class PropertyServiceImpl implements PropertyService {
 
     @Override
     @Transactional
-    public ResponseDTO addProperty(CreatePropertyDTO propertyDTO) {
+    public ResponseDTO addProperty(CreatePropertyDTO propertyDTO) throws ResponseStatusException {
         validateProperty(propertyDTO);
         Property propertyEntity = modelMapper.map(propertyDTO, Property.class);
-        if (!ObjectUtils.isEmpty(propertyEntity.getTenants())){
-            propertyEntity.getTenants().forEach(tenant -> tenant.setProperty(propertyEntity));
+        if (!ObjectUtils.isEmpty(propertyEntity.getTenants())) {
+            propertyEntity.getTenants().forEach(tenant -> {
+                tenant.setProperty(propertyEntity);
+                tenant.setCreatedDate(LocalDate.now());
+                tenant.setUpdatedDate(LocalDate.now());
+            });
         }
+        propertyEntity.setCreatedDate(LocalDate.now());
+        propertyEntity.setUpdatedDate(LocalDate.now());
         propertyRepository.save(propertyEntity);
         return ResponseDTO.builder().data("Property successfully added").build();
     }
@@ -96,10 +123,8 @@ public class PropertyServiceImpl implements PropertyService {
     @Override
     @Transactional
     public void deleteProperty(Long id) {
-        Optional<Property> propertyOptional = propertyRepository.findById(id);
-        propertyOptional.ifPresent(property -> {
-            propertyRepository.deleteById(id);
-        });
+        Property property = propertyRepository.findById(id).orElseThrow(()-> new PropertyNotFoundException("property is not available "));
+        propertyRepository.deleteById(id);
     }
 
     @Override
@@ -125,28 +150,45 @@ public class PropertyServiceImpl implements PropertyService {
         }
     }
 
-    private void validateProperty(CreatePropertyDTO propertyDto){
-        if(ObjectUtils.isEmpty(propertyDto)){
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Property can not be null");
-        }
-        if(ObjectUtils.isEmpty(propertyDto.getAddress()) || ObjectUtils.isEmpty(propertyDto.getEirCode())){
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Address or Eircode can not be null");
-        }
-        if (!ObjectUtils.isEmpty(propertyDto.getTenants())){
-            propertyDto.getTenants().forEach(tenantDTO -> {
-                if(ObjectUtils.isEmpty(tenantDTO.getEmail()) || ObjectUtils.isEmpty(tenantDTO.getPhoneNumber())){
-                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tenant email or mobile number should not be null");
-                }
-                tenantRepository.findByEmailOrPhoneNumber(tenantDTO.getEmail(),tenantDTO.getPhoneNumber())
-                        .ifPresent( (property) -> {
-                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                            String.format("Tenant with this email :%s and phone number :%s is already exists",
-                                    tenantDTO.getEmail(),tenantDTO.getPhoneNumber()));
-                });
-            });
-        }
-        propertyRepository.findByEirCodeOrAddress(propertyDto.getEirCode(), propertyDto.getAddress()).ifPresent( (property) -> {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Property is already exists");
+    private void validateProperty(CreatePropertyDTO propertyDto) throws ResponseStatusException {
+
+        if (ObjectUtils.isEmpty(propertyDto))
+            throw new PropertyValidationException("Property details cannot be empty");
+        if (ObjectUtils.isEmpty(propertyDto.getAddress()) || ObjectUtils.isEmpty(propertyDto.getEirCode()))
+            throw new PropertyValidationException("Address and EirCode are required");
+        if (Boolean.FALSE.equals(Common.isValidEirCode(propertyDto.getEirCode())))
+            throw new PropertyValidationException("Please enter a valid EirCode");
+
+        propertyRepository.findByEirCodeOrAddress(propertyDto.getEirCode(), propertyDto.getAddress()).ifPresent((property) -> {
+            throw new PropertyValidationException("Property with the same EirCode or Address already exists");
         });
+
+        if (!ObjectUtils.isEmpty(propertyDto.getTenants())) {
+            Set<String> emails = new HashSet<>();
+            Set<String> mobileNumbers = new HashSet<>();
+
+            propertyDto.getTenants().forEach(tenantDTO -> {
+
+                if (ObjectUtils.isEmpty(tenantDTO.getEmail()) || ObjectUtils.isEmpty(tenantDTO.getPhoneNumber()))
+                    throw new PropertyValidationException("Tenant email and mobile number should not be empty");
+                if (Boolean.FALSE.equals(Common.isValidMobileNo(tenantDTO.getPhoneNumber())))
+                    throw new PropertyValidationException("Please enter a valid mobile number");
+                if (Boolean.FALSE.equals(Common.isValidEmail(tenantDTO.getEmail())))
+                    throw new PropertyValidationException("Please enter a valid email address");
+                tenantRepository.findByEmailOrPhoneNumber(tenantDTO.getEmail(), tenantDTO.getPhoneNumber())
+                        .ifPresent((property) -> {
+                            throw new PropertyValidationException("Email or PhoneNumber already exists");
+                        });
+                emails.add(tenantDTO.getEmail());
+                mobileNumbers.add(tenantDTO.getPhoneNumber());
+
+            });
+            if (emails.size()< propertyDto.getTenants().size() || mobileNumbers.size() < propertyDto.getTenants().size())
+            {
+                throw new PropertyValidationException("Yoo cannot use the same Email or PhoneNumber for two different Tenants");
+            }
+        }
     }
+
+
 }

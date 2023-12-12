@@ -15,6 +15,7 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -43,12 +44,12 @@ public class Property {
     @Column(name = "rental_cost")
     private double rentalCost;
 
-    @OneToMany(mappedBy = "property", cascade = {CascadeType.REMOVE, CascadeType.ALL}, fetch = FetchType.LAZY)
+    @Column(name = "created_date",updatable = false)
+    private LocalDate createdDate;
+
+    @Column(name = "updated_date",updatable = true)
+    private LocalDate updatedDate;
+
+    @OneToMany(mappedBy = "property", cascade = {CascadeType.ALL})
     private List<Tenant> tenants;
-
-    @Column(name = "created_date")
-    private LocalDateTime createdDate;
-
-    @Column(name = "updated_date")
-    private LocalDateTime updatedDate;
 }
