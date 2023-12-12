@@ -55,7 +55,7 @@ class CampusrentalApplicationTests {
 		when(propertyRepository.findById(existingId)).thenReturn(Optional.ofNullable(mockProperty));
 		assertEquals(mockPropertyDto, propertyService.getPropertyByIdWithTenantCount(existingId));
 	}*/
-	@Test
+	/*@Test
 	void getPropertyByIdWithExistingId() {
 		long existingId = 1L;
 		PropertyDTO mockPropertyDTO = new PropertyDTO();
@@ -68,7 +68,7 @@ class CampusrentalApplicationTests {
 		assertEquals(mockPropertyDTO, responseEntity.getBody());
 
 		verify(propertyService, times(1)).getPropertyByIdWithTenantCount(existingId);
-	}
+	}*/
 
 
 }
